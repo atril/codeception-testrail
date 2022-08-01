@@ -1,5 +1,5 @@
 {
-    "name": "bookit/codeception-testrail",
+    "name": "atril/codeception-testrail",
     "description": "Codeception Extension for TestRail Reporting",
     "homepage": "https://github.com/bookitcom",
     "license": "MIT",
