@@ -1,14 +1,17 @@
 {
-    "name": "atril/codeception-testrail",
+    "name": "bookit/codeception-testrail",
     "description": "Codeception Extension for TestRail Reporting",
     "homepage": "https://github.com/bookitcom",
     "license": "MIT",
     "require": {
         "codeception/codeception": "^4.1",
-        "guzzlehttp/guzzle": "^6.2"
+        "phpunit/phpunit": "^7.5",
+        "guzzlehttp/guzzle": "^7.3"
     },
     "require-dev": {
-        "squizlabs/php_codesniffer": "^2.6"
+        "squizlabs/php_codesniffer": "^2.6",
+        "codeception/module-phpbrowser": "^2.0",
+        "codeception/module-asserts": "^2.0"
     },
     "autoload": {
         "psr-4": {

@@ -372,10 +372,12 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
                             0 => [
                                 'case_id' => 424242,
                                 'status_id' => Extension::TESTRAIL_STATUS_SUCCESS,
+                                'elapsed' => "1s",
                             ],
-                            2 => [
+                            3 => [
                                 'case_id' => 424244,
                                 'status_id' => Extension::TESTRAIL_STATUS_FAILED,
+                                'elapsed' => "2s",
                             ],
                         ],
                     ])
@@ -400,6 +402,12 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
                     [
                         'case_id' => 424242,
                         'status_id' => Extension::TESTRAIL_STATUS_SUCCESS,
+                        'elapsed' => "0s",
+                    ],
+                    [
+                        'case_id' => 424242,
+                        'status_id' => Extension::TESTRAIL_STATUS_SUCCESS,
+                        'elapsed' => "5s",
                     ],
                     [
                         'case_id' => 424243,
@@ -408,6 +416,7 @@ class ExtensionTest extends \PHPUnit_Framework_TestCase
                     [
                         'case_id' => 424244,
                         'status_id' => Extension::TESTRAIL_STATUS_FAILED,
+                        'elapsed' => "2s",
                     ],
                 ]
             ]);

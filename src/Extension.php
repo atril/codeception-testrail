@@ -1,4 +1,5 @@
 <?php
+
 namespace BookIt\Codeception\TestRail;
 
 use Codeception\Event\FailEvent;
@@ -8,20 +9,19 @@ use Codeception\Events;
 use Codeception\Exception\ExtensionException;
 use Codeception\Extension as CodeceptionExtension;
 use Codeception\Test\Cest;
-use Codeception\Test\Test;
 use Codeception\TestInterface;
 use Codeception\Util\Annotation;
 
 class Extension extends CodeceptionExtension
 {
     const ANNOTATION_SUITE = 'tr-suite';
-    const ANNOTATION_CASE  = 'tr-case';
+    const ANNOTATION_CASE = 'tr-case';
 
-    const STATUS_SUCCESS    = 'success';
-    const STATUS_SKIPPED    = 'skipped';
+    const STATUS_SUCCESS = 'success';
+    const STATUS_SKIPPED = 'skipped';
     const STATUS_INCOMPLETE = 'incomplete';
-    const STATUS_FAILED     = 'failed';
-    const STATUS_ERROR      = 'error';
+    const STATUS_FAILED = 'failed';
+    const STATUS_ERROR = 'error';
 
     const TESTRAIL_STATUS_SUCCESS = 1;
     const TESTRAIL_STATUS_FAILED = 5;
@@ -30,13 +30,13 @@ class Extension extends CodeceptionExtension
     const TESTRAIL_STATUS_BLOCKED = 2;
 
     public static $events = [
-        Events::SUITE_AFTER     => 'afterSuite',
+        Events::SUITE_AFTER => 'afterSuite',
 
-        Events::TEST_SUCCESS    => 'success',
-        Events::TEST_SKIPPED    => 'skipped',
+        Events::TEST_SUCCESS => 'success',
+        Events::TEST_SKIPPED => 'skipped',
         Events::TEST_INCOMPLETE => 'incomplete',
-        Events::TEST_FAIL       => 'failed',
-        Events::TEST_ERROR      => 'errored',
+        Events::TEST_FAIL => 'failed',
+        Events::TEST_ERROR => 'errored',
     ];
 
     /**
@@ -62,17 +62,17 @@ class Extension extends CodeceptionExtension
     /**
      * @var array
      */
-    protected $config = [ 'enabled' => true ];
+    protected $config = ['enabled' => true];
 
     /**
      * @var array
      */
     protected $statuses = [
-        self::STATUS_SUCCESS    => self::TESTRAIL_STATUS_SUCCESS,
-        self::STATUS_SKIPPED    => self::TESTRAIL_STATUS_UNTESTED,
+        self::STATUS_SUCCESS => self::TESTRAIL_STATUS_SUCCESS,
+        self::STATUS_SKIPPED => self::TESTRAIL_STATUS_UNTESTED,
         self::STATUS_INCOMPLETE => self::TESTRAIL_STATUS_SUCCESS,
-        self::STATUS_FAILED     => self::TESTRAIL_STATUS_FAILED,
-        self::STATUS_ERROR      => self::TESTRAIL_STATUS_FAILED,
+        self::STATUS_FAILED => self::TESTRAIL_STATUS_FAILED,
+        self::STATUS_ERROR => self::TESTRAIL_STATUS_FAILED,
     ];
 
     public function _initialize()
@@ -81,7 +81,7 @@ class Extension extends CodeceptionExtension
         if ($this->config['enabled']) {
             $conn = $this->getConnection();
 
-            $project = $conn->execute('get_project/'. $this->config['project']);
+            $project = $conn->execute('get_project/' . $this->config['project']);
             if ($project->is_completed) {
                 throw new ExtensionException(
                     $this,
@@ -91,10 +91,10 @@ class Extension extends CodeceptionExtension
 
             // TODO: procedural generation of test plan names (template?  provider class?)
             $plan = $conn->execute(
-                'add_plan/'. $project->id,
+                'add_plan/' . $project->id,
                 'POST',
                 [
-                'name' => date('Y-m-d H:i:s'),
+                    'name' => date('Y-m-d H:i:s'),
                 ]
             );
 
@@ -111,6 +111,7 @@ class Extension extends CodeceptionExtension
     public function afterSuite(SuiteEvent $event)
     {
         $recorded = $this->getResults();
+
         // skip action if we don't have results or the Extension is disabled
         if (empty($recorded) || !$this->config['enabled']) {
             return;
@@ -119,41 +120,54 @@ class Extension extends CodeceptionExtension
         $conn = $this->getConnection();
 
         foreach ($recorded as $suiteId => $results) {
-            $caseIds = array_reduce(
-                $results,
-                function ($carry, $val) {
-                    $carry[] = $val['case_id'];
-                    return $carry;
-                },
-                []
+            $caseIds = array_unique(
+                array_reduce(
+                    $results,
+                    function ($carry, $val) {
+                        $carry[] = $val['case_id'];
+                        return $carry;
+                    },
+                    []
+                )
             );
+            $caseIds = [...$caseIds];
 
-            $suiteDetails = $conn->execute('/get_suite/'. $suiteId);
+            $suiteDetails = $conn->execute('/get_suite/' . $suiteId);
 
             $entry = $conn->execute(
-                '/add_plan_entry/'. $this->plan,
+                '/add_plan_entry/' . $this->plan,
                 'POST',
                 [
-                'suite_id' => $suiteId,
-                'name' => $event->getSuite()->getName(). ' : '. $suiteDetails->name,
-                'case_ids' => $caseIds,
-                'include_all' => false,
+                    'suite_id' => $suiteId,
+                    'name' => $event->getSuite()->getName() . ' : ' . $suiteDetails->name,
+                    'case_ids' => $caseIds,
+                    'include_all' => false,
                 ]
             );
+
+            // reduce duplicated result for can* assertions
+            $tempArray = array_unique(array_column($results, 'case_id'));
+            $results = array_intersect_key($results, $tempArray);
 
             $results = array_filter(
                 $results,
                 function ($val) {
-                    return $val['status_id'] != $this::TESTRAIL_STATUS_UNTESTED;
+                    return $val['status_id'] != $this::TESTRAIL_STATUS_UNTESTED;;
                 }
             );
 
+            foreach ($results as &$result) {
+                if ($result['elapsed'] == '0s') {
+                    $result['elapsed'] = '1s';
+                }
+            }
+
             $run = $entry->runs[0];
             $conn->execute(
-                '/add_results_for_cases/'. $run->id,
+                '/add_results_for_cases/' . $run->id,
                 'POST',
                 [
-                'results' => $results,
+                    'results' => $results,
                 ]
             );
         }
@@ -162,7 +176,6 @@ class Extension extends CodeceptionExtension
     public function success(TestEvent $event)
     {
         $test = $event->getTest();
-
         if (!$test instanceof Cest) {
             return;
         }
@@ -174,7 +187,7 @@ class Extension extends CodeceptionExtension
             $case,
             $this->statuses[$this::STATUS_SUCCESS],
             [
-            'elapsed' => $event->getTime(),
+                'elapsed' => $event->getTime(),
             ]
         );
     }
@@ -194,7 +207,7 @@ class Extension extends CodeceptionExtension
             $case,
             $this->statuses[$this::STATUS_SKIPPED],
             [
-            'elapsed' => $event->getTime(),
+                'elapsed' => $event->getTime(),
             ]
         );
     }
@@ -214,7 +227,7 @@ class Extension extends CodeceptionExtension
             $case,
             $this->statuses[$this::STATUS_INCOMPLETE],
             [
-            'elapsed' => $event->getTime(),
+                'elapsed' => $event->getTime(),
             ]
         );
     }
@@ -234,7 +247,7 @@ class Extension extends CodeceptionExtension
             $case,
             $this->statuses[$this::STATUS_FAILED],
             [
-            'elapsed' => $event->getTime(),
+                'elapsed' => $event->getTime(),
             ]
         );
     }
@@ -254,7 +267,7 @@ class Extension extends CodeceptionExtension
             $case,
             $this->statuses[$this::STATUS_ERROR],
             [
-            'elapsed' => $event->getTime(),
+                'elapsed' => $event->getTime(),
             ]
         );
     }
@@ -293,10 +306,10 @@ class Extension extends CodeceptionExtension
     }
 
     /**
-     * @param int   $suite  TestRail Suite ID
-     * @param int   $case   TestRail Case ID
-     * @param int   $status TestRail Status ID
-     * @param array $other  Array of other elements to add to the result (comments, elapsed, etc)
+     * @param int $suite TestRail Suite ID
+     * @param int $case TestRail Case ID
+     * @param int $status TestRail Status ID
+     * @param array $other Array of other elements to add to the result (comments, elapsed, etc)
      */
     public function handleResult($suite, $case, $status, $optional = [])
     {
@@ -389,7 +402,7 @@ class Extension extends CodeceptionExtension
 
             $amount = floor($intTime / $divisor);
             $intTime -= $amount * $divisor;
-            $formatted .= $amount.$suffix.' ';
+            $formatted .= $amount . $suffix . ' ';
         }
 
         return trim($formatted);
